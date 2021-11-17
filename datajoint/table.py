@@ -65,7 +65,8 @@ class Table(QueryExpression):
 
     @property
     def definition(self):
-        raise NotImplementedError('Subclasses of Table must implement the `definition` property')
+        raise NotImplementedError(
+            'Subclasses of Table must implement the `definition` property')
 
     def declare(self, context=None):
         """
@@ -76,7 +77,8 @@ class Table(QueryExpression):
         if self.connection.in_transaction:
             raise DataJointError('Cannot declare new tables inside a transaction, '
                                  'e.g. from inside a populate/make call')
-        sql, external_stores = declare(self.full_table_name, self.definition, context)
+        sql, external_stores = declare(
+            self.full_table_name, self.definition, context)
         sql = sql.format(database=self.database)
         try:
             # declare all external tables before declaring main table
@@ -106,7 +108,8 @@ class Table(QueryExpression):
             if prompt:
                 print('Nothing to alter.')
         else:
-            sql = "ALTER TABLE {tab}\n\t".format(tab=self.full_table_name) + ",\n\t".join(sql)
+            sql = "ALTER TABLE {tab}\n\t".format(
+                tab=self.full_table_name) + ",\n\t".join(sql)
             if not prompt or user_choice(sql + '\n\nExecute?') == 'yes':
                 try:
                     # declare all external tables before declaring main table
@@ -117,7 +120,8 @@ class Table(QueryExpression):
                     # skip if no create privilege
                     pass
                 else:
-                    self.__class__._heading = Heading(table_info=self.heading.table_info)  # reset heading
+                    self.__class__._heading = Heading(
+                        table_info=self.heading.table_info)  # reset heading
                     if prompt:
                         print('Table altered')
                     self._log('Altered ' + self.full_table_name)
@@ -148,7 +152,8 @@ class Table(QueryExpression):
         nodes = [next(iter(get_edge(name).items())) if name.isdigit() else (name, props)
                  for name, props in get_edge(self.full_table_name, primary).items()]
         if as_objects:
-            nodes = [(FreeTable(self.connection, name), props) for name, props in nodes]
+            nodes = [(FreeTable(self.connection, name), props)
+                     for name, props in nodes]
         if not foreign_key_info:
             nodes = [name for name, props in nodes]
         return nodes
@@ -167,7 +172,8 @@ class Table(QueryExpression):
         nodes = [next(iter(get_edge(name).items())) if name.isdigit() else (name, props)
                  for name, props in get_edge(self.full_table_name, primary).items()]
         if as_objects:
-            nodes = [(FreeTable(self.connection, name), props) for name, props in nodes]
+            nodes = [(FreeTable(self.connection, name), props)
+                     for name, props in nodes]
         if not foreign_key_info:
             nodes = [name for name, props in nodes]
         return nodes
@@ -202,9 +208,10 @@ class Table(QueryExpression):
         """
         :return: True is the table is declared in the schema.
         """
-        return self.connection.query(
+        # TODO: Use core library execute query functionality to just get rows recieved
+        return len(list(self.connection.query(
             'SHOW TABLES in `{database}` LIKE "{table_name}"'.format(
-                database=self.database, table_name=self.table_name)).rowcount > 0
+                database=self.database, table_name=self.table_name)))) > 0
 
     @property
     def full_table_name(self):
@@ -216,7 +223,8 @@ class Table(QueryExpression):
     @property
     def _log(self):
         if self._log_ is None:
-            self._log_ = Log(self.connection, database=self.database, skip_logging=self.table_name.startswith('~'))
+            self._log_ = Log(self.connection, database=self.database,
+                             skip_logging=self.table_name.startswith('~'))
         return self._log_
 
     @property
@@ -239,23 +247,28 @@ class Table(QueryExpression):
         if not isinstance(row, collections.abc.Mapping):
             raise DataJointError('The argument of update1 must be dict-like.')
         if not set(row).issuperset(self.primary_key):
-            raise DataJointError('The argument of update1 must supply all primary key values.')
+            raise DataJointError(
+                'The argument of update1 must supply all primary key values.')
         try:
-            raise DataJointError('Attribute `%s` not found.' % next(k for k in row if k not in self.heading.names))
+            raise DataJointError('Attribute `%s` not found.' % next(
+                k for k in row if k not in self.heading.names))
         except StopIteration:
             pass  # ok
         if len(self.restriction):
-            raise DataJointError('Update cannot be applied to a restricted table.')
+            raise DataJointError(
+                'Update cannot be applied to a restricted table.')
         key = {k: row[k] for k in self.primary_key}
         if len(self & key) != 1:
             raise DataJointError('Update entry must exist.')
         # UPDATE query
-        row = [self.__make_placeholder(k, v) for k, v in row.items() if k not in self.primary_key]
+        row = [self.__make_placeholder(
+            k, v) for k, v in row.items() if k not in self.primary_key]
         query = "UPDATE {table} SET {assignments} WHERE {where}".format(
             table=self.full_table_name,
             assignments=",".join('`%s`=%s' % r[:2] for r in row),
             where=make_condition(self, key, set()))
-        self.connection.query(query, args=list(r[2] for r in row if r[2] is not None))
+        self.connection.query(query, args=list(
+            r[2] for r in row if r[2] is not None))
 
     def insert1(self, row, **kwargs):
         """
@@ -288,12 +301,14 @@ class Table(QueryExpression):
             ).to_records(index=False)
 
         # prohibit direct inserts into auto-populated tables
-        if not allow_direct_insert and not getattr(self, '_allow_insert', True):  # allow_insert is only used in AutoPopulate
+        # allow_insert is only used in AutoPopulate
+        if not allow_direct_insert and not getattr(self, '_allow_insert', True):
             raise DataJointError(
                 'Inserts into an auto-populated table can only done inside its make method during a populate call.'
                 ' To override, set keyword argument allow_direct_insert=True.')
 
-        if inspect.isclass(rows) and issubclass(rows, QueryExpression):   # instantiate if a class
+        # instantiate if a class
+        if inspect.isclass(rows) and issubclass(rows, QueryExpression):
             rows = rows()
         if isinstance(rows, QueryExpression):
             # insert from select
@@ -304,7 +319,8 @@ class Table(QueryExpression):
                         next(name for name in rows.heading if name not in self.heading))
                 except StopIteration:
                     pass
-            fields = list(name for name in rows.heading if name in self.heading)
+            fields = list(
+                name for name in rows.heading if name in self.heading)
             query = '{command} INTO {table} ({fields}) {select}{duplicate}'.format(
                 command='REPLACE' if replace else 'INSERT',
                 fields='`' + '`,`'.join(fields) + '`',
@@ -312,19 +328,22 @@ class Table(QueryExpression):
                 select=rows.make_sql(fields),
                 duplicate=(' ON DUPLICATE KEY UPDATE `{pk}`={table}.`{pk}`'.format(
                     table=self.full_table_name, pk=self.primary_key[0])
-                           if skip_duplicates else ''))
+                    if skip_duplicates else ''))
             self.connection.query(query)
             return
 
-        field_list = []  # collects the field list from first row (passed by reference)
-        rows = list(self.__make_row_to_insert(row, field_list, ignore_extra_fields) for row in rows)
+        # collects the field list from first row (passed by reference)
+        field_list = []
+        rows = list(self.__make_row_to_insert(
+            row, field_list, ignore_extra_fields) for row in rows)
         if rows:
             try:
                 query = "{command} INTO {destination}(`{fields}`) VALUES {placeholders}{duplicate}".format(
                     command='REPLACE' if replace else 'INSERT',
                     destination=self.from_clause(),
                     fields='`,`'.join(field_list),
-                    placeholders=','.join('(' + ','.join(row['placeholders']) + ')' for row in rows),
+                    placeholders=','.join(
+                        '(' + ','.join(row['placeholders']) + ')' for row in rows),
                     duplicate=(' ON DUPLICATE KEY UPDATE `{pk}`=`{pk}`'.format(pk=self.primary_key[0])
                                if skip_duplicates else ''))
                 self.connection.query(query, args=list(
@@ -344,7 +363,8 @@ class Table(QueryExpression):
         """
         query = 'DELETE FROM ' + self.full_table_name + self.where_clause()
         self.connection.query(query)
-        count = self.connection.query("SELECT ROW_COUNT()").fetchone()[0] if get_count else None
+        count = self.connection.query("SELECT ROW_COUNT()").fetchone()[
+            0] if get_count else None
         self._log(query[:255])
         return count
 
@@ -355,19 +375,23 @@ class Table(QueryExpression):
             try:
                 delete_count = self.delete_quick(get_count=True)
             except IntegrityError as error:
-                match = foreign_key_error_regexp.match(error.args[0]).groupdict()
-                if "`.`" not in match['child']:  # if schema name missing, use self
+                match = foreign_key_error_regexp.match(
+                    error.args[0]).groupdict()
+                # if schema name missing, use self
+                if "`.`" not in match['child']:
                     match['child'] = '{}.{}'.format(self.full_table_name.split(".")[0],
                                                     match['child'])
                 if match['pk_attrs'] is not None:  # fully matched, adjusting the keys
-                    match['fk_attrs'] = [k.strip('`') for k in match['fk_attrs'].split(',')]
-                    match['pk_attrs'] = [k.strip('`') for k in match['pk_attrs'].split(',')]
+                    match['fk_attrs'] = [
+                        k.strip('`') for k in match['fk_attrs'].split(',')]
+                    match['pk_attrs'] = [
+                        k.strip('`') for k in match['pk_attrs'].split(',')]
                 else:  # only partially matched, querying with constraint to determine keys
                     match['fk_attrs'], match['parent'], match['pk_attrs'] = list(map(
                         list, zip(*self.connection.query(constraint_info_query, args=(
                             match['name'].strip('`'),
                             *[_.strip('`') for _ in match['child'].split('`.`')]
-                            )).fetchall())))
+                        )).fetchall())))
                     match['parent'] = match['parent'][0]
                 # restrict child by self if
                 # 1. if self's restriction attributes are not in child's primary key
@@ -452,7 +476,8 @@ class Table(QueryExpression):
             logger.info("Dropped table %s" % self.full_table_name)
             self._log(query[:255])
         else:
-            logger.info("Nothing to drop: table %s is not declared" % self.full_table_name)
+            logger.info("Nothing to drop: table %s is not declared" %
+                        self.full_table_name)
 
     def drop(self):
         """
@@ -468,7 +493,8 @@ class Table(QueryExpression):
                   if not table.isdigit()]
         if config['safemode']:
             for table in tables:
-                print(table, '(%d tuples)' % len(FreeTable(self.connection, table)))
+                print(table, '(%d tuples)' %
+                      len(FreeTable(self.connection, table)))
             do_drop = user_choice("Proceed?", default='no') == 'yes'
         if do_drop:
             for table in reversed(tables):
@@ -486,7 +512,8 @@ class Table(QueryExpression):
         return ret['Data_length'] + ret['Index_length']
 
     def show_definition(self):
-        raise AttributeError('show_definition is deprecated. Use the describe method instead.')
+        raise AttributeError(
+            'show_definition is deprecated. Use the describe method instead.')
 
     def describe(self, context=None, printout=True):
         """
@@ -517,12 +544,15 @@ class Table(QueryExpression):
                     if attributes_thus_far.issuperset(fk_props['attr_map']):
                         # foreign key properties
                         try:
-                            index_props = indexes.pop(tuple(fk_props['attr_map']))
+                            index_props = indexes.pop(
+                                tuple(fk_props['attr_map']))
                         except KeyError:
                             index_props = ''
                         else:
-                            index_props = [k for k, v in index_props.items() if v]
-                            index_props = ' [{}]'.format(', '.join(index_props)) if index_props else ''
+                            index_props = [
+                                k for k, v in index_props.items() if v]
+                            index_props = ' [{}]'.format(
+                                ', '.join(index_props)) if index_props else ''
 
                         if not fk_props['aliased']:
                             # simple foreign key
@@ -533,7 +563,8 @@ class Table(QueryExpression):
                             # projected foreign key
                             definition += '->{props} {class_name}.proj({proj_list})\n'.format(
                                 props=index_props,
-                                class_name=lookup_class_name(parent_name, context) or parent_name,
+                                class_name=lookup_class_name(
+                                    parent_name, context) or parent_name,
                                 proj_list=','.join(
                                     '{}="{}"'.format(attr, ref)
                                     for attr, ref in fk_props['attr_map'].items() if ref != attr))
@@ -541,8 +572,10 @@ class Table(QueryExpression):
             if do_include:
                 attributes_declared.add(attr.name)
                 definition += '%-20s : %-28s %s\n' % (
-                    attr.name if attr.default is None else '%s=%s' % (attr.name, attr.default),
-                    '%s%s' % (attr.type, ' auto_increment' if attr.autoincrement else ''),
+                    attr.name if attr.default is None else '%s=%s' % (
+                        attr.name, attr.default),
+                    '%s%s' % (
+                        attr.type, ' auto_increment' if attr.autoincrement else ''),
                     '# ' + attr.comment if attr.comment else '')
         # add remaining indexes
         for k, v in indexes.items():
@@ -574,7 +607,8 @@ class Table(QueryExpression):
             '`_update` is a deprecated function to be removed in datajoint 0.14. '
             'Use `.update1` instead.')
         if len(self) != 1:
-            raise DataJointError('Update is only allowed on one tuple at a time')
+            raise DataJointError(
+                'Update is only allowed on one tuple at a time')
         if attrname not in self.heading:
             raise DataJointError('Invalid attribute name')
         if attrname in self.heading.primary_key:
@@ -586,7 +620,8 @@ class Table(QueryExpression):
             value = blob.pack(value)
             placeholder = '%s'
         elif attr.numeric:
-            if value is None or np.isnan(float(value)):  # nans are turned into NULLs
+            # nans are turned into NULLs
+            if value is None or np.isnan(float(value)):
                 placeholder = 'NULL'
                 value = None
             else:
@@ -599,7 +634,8 @@ class Table(QueryExpression):
             attrname=attrname,
             placeholder=placeholder,
             where_clause=self.where_clause())
-        self.connection.query(command, args=(value, ) if value is not None else ())
+        self.connection.query(command, args=(
+            value, ) if value is not None else ())
 
     # --- private helper functions ----
     def __make_placeholder(self, name, value, ignore_extra_fields=False):
@@ -631,15 +667,18 @@ class Table(QueryExpression):
                 value = value.bytes
             elif attr.is_blob:
                 value = blob.pack(value)
-                value = self.external[attr.store].put(value).bytes if attr.is_external else value
+                value = self.external[attr.store].put(
+                    value).bytes if attr.is_external else value
             elif attr.is_attachment:
                 attachment_path = Path(value)
                 if attr.is_external:
                     # value is hash of contents
-                    value = self.external[attr.store].upload_attachment(attachment_path).bytes
+                    value = self.external[attr.store].upload_attachment(
+                        attachment_path).bytes
                 else:
                     # value is filename + contents
-                    value = str.encode(attachment_path.name) + b'\0' + attachment_path.read_bytes()
+                    value = str.encode(attachment_path.name) + \
+                        b'\0' + attachment_path.read_bytes()
             elif attr.is_filepath:
                 value = self.external[attr.store].upload_filepath(value).bytes
             elif attr.numeric:
@@ -662,9 +701,11 @@ class Table(QueryExpression):
                 if not ignore_extra_fields:
                     for field in fields:
                         if field not in self.heading:
-                            raise KeyError(u'`{0:s}` is not in the table heading'.format(field))
+                            raise KeyError(
+                                u'`{0:s}` is not in the table heading'.format(field))
             elif set(field_list) != set(fields).intersection(self.heading.names):
-                raise DataJointError('Attempt to insert rows with different fields')
+                raise DataJointError(
+                    'Attempt to insert rows with different fields')
 
         if isinstance(row, np.void):  # np.array
             check_fields(row.dtype.fields)
@@ -682,7 +723,8 @@ class Table(QueryExpression):
                         '{given} given; {expected} expected'.format(
                             given=len(row), expected=len(self.heading)))
             except TypeError:
-                raise DataJointError('Datatype %s cannot be inserted' % type(row))
+                raise DataJointError(
+                    'Datatype %s cannot be inserted' % type(row))
             else:
                 attributes = [self.__make_placeholder(name, value, ignore_extra_fields)
                               for name, value in zip(self.heading, row)]
@@ -690,16 +732,21 @@ class Table(QueryExpression):
             attributes = [a for a in attributes if a is not None]
 
         assert len(attributes), 'Empty tuple'
-        row_to_insert = dict(zip(('names', 'placeholders', 'values'), zip(*attributes)))
+        row_to_insert = dict(
+            zip(('names', 'placeholders', 'values'), zip(*attributes)))
         if not field_list:
             # first row sets the composition of the field list
             field_list.extend(row_to_insert['names'])
         else:
             #  reorder attributes in row_to_insert to match field_list
-            order = list(row_to_insert['names'].index(field) for field in field_list)
-            row_to_insert['names'] = list(row_to_insert['names'][i] for i in order)
-            row_to_insert['placeholders'] = list(row_to_insert['placeholders'][i] for i in order)
-            row_to_insert['values'] = list(row_to_insert['values'][i] for i in order)
+            order = list(row_to_insert['names'].index(field)
+                         for field in field_list)
+            row_to_insert['names'] = list(
+                row_to_insert['names'][i] for i in order)
+            row_to_insert['placeholders'] = list(
+                row_to_insert['placeholders'][i] for i in order)
+            row_to_insert['values'] = list(
+                row_to_insert['values'][i] for i in order)
         return row_to_insert
 
 
@@ -716,7 +763,8 @@ def lookup_class_name(name, context, depth=3):
     while nodes:
         node = nodes.pop(0)
         for member_name, member in node['context'].items():
-            if not member_name.startswith('_'):  # skip IPython's implicit variables
+            # skip IPython's implicit variables
+            if not member_name.startswith('_'):
                 if inspect.isclass(member) and issubclass(member, Table):
                     if member.full_table_name == name:   # found it!
                         return '.'.join([node['context_name'],  member_name]).lstrip('.')
@@ -736,7 +784,8 @@ def lookup_class_name(name, context, depth=3):
                     try:
                         nodes.append(
                             dict(context=dict(inspect.getmembers(member)),
-                                 context_name=node['context_name'] + '.' + member_name,
+                                 context_name=node['context_name'] +
+                                 '.' + member_name,
                                  depth=node['depth']-1))
                     except ImportError:
                         pass  # could not import, so do not attempt
@@ -750,8 +799,10 @@ class FreeTable(Table):
     :param conn:  a dj.Connection object
     :param full_table_name: in format `database`.`table_name`
     """
+
     def __init__(self, conn, full_table_name):
-        self.database, self._table_name = (s.strip('`') for s in full_table_name.split('.'))
+        self.database, self._table_name = (
+            s.strip('`') for s in full_table_name.split('.'))
         self._connection = conn
         self._support = [full_table_name]
         self._heading = Heading(table_info=dict(

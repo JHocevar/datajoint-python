@@ -24,3 +24,9 @@ class Cursor:
             raise StopIteration
         else:
             datajoint_core_assert_success(err)
+
+    def fetchone(self):
+        return self.__next__()
+
+    def fetchall(self):
+        return list(self)

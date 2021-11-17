@@ -64,77 +64,94 @@ class TableRow:
             raise TypeError("index must be a string or integer")
         return out_column
 
-    def to_dict(self):
+    def decode_col(self, index):
         try:
-            # Single value wrapper for all decoded values.
             value = dj_core.allocated_decoded_value_new()
 
-            result = dict()
-            for i in range(self.column_count()):
-                # Because we can't use columns(), we have to work on
-                # the assumption that all columns are numbered properly via
-                # their ordinal.
-                col = self.column(i)
+            # Because we can't use columns(), we have to work on
+            # the assumption that all columns are numbered properly via
+            # their ordinal.
+
+            if index >= self.column_count():
+                return None, None
+
+            col_name = None
+
+            if type(index) == str:
+                col_name = index
+            else:
+                col = self.column(index)
                 col_name = col.name()
-                err = dj_core.table_row_decode_to_allocation(
-                    self.native[0], col.native[0], value)
-                if err != dj_core.ErrorCode_Success:
-                    # TODO(Jackson-nestelroad) clean up DECODE FAILED
-                    result[col_name] = "DECODE FAILED"
-                    continue
+            err = dj_core.table_row_decode_to_allocation(
+                self.native[0], col.native[0], value)
+            if err != dj_core.ErrorCode_Success:
+                # TODO(Jackson-nestelroad) clean up DECODE FAILED
+                result = "DECODE FAILED"
+                return col_name, result
 
-                # `raw_data` is a void* of length `data_size` bytes.
-                raw_data = dj_core.allocated_decoded_value_data(value)
-                data_size = dj_core.allocated_decoded_value_size(value)
+            # `raw_data` is a void* of length `data_size` bytes.
+            raw_data = dj_core.allocated_decoded_value_data(value)
+            data_size = dj_core.allocated_decoded_value_size(value)
 
-                col_name = col.name()
-                # Decode the value to a Python value.
-                dj_type = dj_core.allocated_decoded_value_type(value)
-                if dj_type == dj_core.NativeTypeEnum_None or dj_type == dj_core.NativeTypeEnum_Null:
-                    result[col_name] = None
-                elif dj_type == dj_core.NativeTypeEnum_Bool:
-                    result[col_name] = ffi.cast(
-                        "int8_t*", raw_data)[0]
-                elif dj_type == dj_core.NativeTypeEnum_Int8:
-                    result[col_name] = ffi.cast(
-                        "int8_t*", raw_data)[0]
-                elif dj_type == dj_core.NativeTypeEnum_UInt8:
-                    result[col_name] = ffi.cast(
-                        "uint8_t*", raw_data)[0]
-                elif dj_type == dj_core.NativeTypeEnum_Int16:
-                    result[col_name] = ffi.cast(
-                        "int16_t*", raw_data)[0]
-                elif dj_type == dj_core.NativeTypeEnum_UInt16:
-                    result[col_name] = ffi.cast(
-                        "uint16_t*", raw_data)[0]
-                elif dj_type == dj_core.NativeTypeEnum_Int32:
-                    result[col_name] = ffi.cast(
-                        "int32_t*", raw_data)[0]
-                elif dj_type == dj_core.NativeTypeEnum_UInt32:
-                    result[col_name] = ffi.cast(
-                        "uint32_t*", raw_data)[0]
-                elif dj_type == dj_core.NativeTypeEnum_Int64:
-                    result[col_name] = ffi.cast(
-                        "int64_t*", raw_data)[0]
-                elif dj_type == dj_core.NativeTypeEnum_UInt64:
-                    result[col_name] = ffi.cast(
-                        "uint64_t*", raw_data)[0]
-                elif dj_type == dj_core.NativeTypeEnum_String:
-                    result[col_name] = ffi.string(
-                        ffi.cast("char*", raw_data), data_size).decode('utf-8')
-                elif dj_type == dj_core.NativeTypeEnum_Float32:
-                    result[col_name] = ffi.cast(
-                        "float*", raw_data)[0]
-                elif dj_type == dj_core.NativeTypeEnum_Float64:
-                    result[col_name] = ffi.cast(
-                        "double*", raw_data)[0]
-                elif dj_type == dj_core.NativeTypeEnum_Bytes:
-                    result[col_name] = ffi.unpack(
-                        ffi.cast("unsigned char*", raw_data), data_size)
-                else:
-                    raise AssertionError("decoded value has invalid type name")
-
-            return result
+            col_name = col.name()
+            # Decode the value to a Python value.
+            dj_type = dj_core.allocated_decoded_value_type(value)
+            if dj_type == dj_core.NativeTypeEnum_None or dj_type == dj_core.NativeTypeEnum_Null:
+                result = None
+            elif dj_type == dj_core.NativeTypeEnum_Bool:
+                result = ffi.cast(
+                    "int8_t*", raw_data)[0]
+            elif dj_type == dj_core.NativeTypeEnum_Int8:
+                result = ffi.cast(
+                    "int8_t*", raw_data)[0]
+            elif dj_type == dj_core.NativeTypeEnum_UInt8:
+                result = ffi.cast(
+                    "uint8_t*", raw_data)[0]
+            elif dj_type == dj_core.NativeTypeEnum_Int16:
+                result = ffi.cast(
+                    "int16_t*", raw_data)[0]
+            elif dj_type == dj_core.NativeTypeEnum_UInt16:
+                result = ffi.cast(
+                    "uint16_t*", raw_data)[0]
+            elif dj_type == dj_core.NativeTypeEnum_Int32:
+                result = ffi.cast(
+                    "int32_t*", raw_data)[0]
+            elif dj_type == dj_core.NativeTypeEnum_UInt32:
+                result = ffi.cast(
+                    "uint32_t*", raw_data)[0]
+            elif dj_type == dj_core.NativeTypeEnum_Int64:
+                result = ffi.cast(
+                    "int64_t*", raw_data)[0]
+            elif dj_type == dj_core.NativeTypeEnum_UInt64:
+                result = ffi.cast(
+                    "uint64_t*", raw_data)[0]
+            elif dj_type == dj_core.NativeTypeEnum_String:
+                result = ffi.string(
+                    ffi.cast("char*", raw_data), data_size).decode('utf-8')
+            elif dj_type == dj_core.NativeTypeEnum_Float32:
+                result = ffi.cast(
+                    "float*", raw_data)[0]
+            elif dj_type == dj_core.NativeTypeEnum_Float64:
+                result = ffi.cast(
+                    "double*", raw_data)[0]
+            elif dj_type == dj_core.NativeTypeEnum_Bytes:
+                result = ffi.unpack(
+                    ffi.cast("unsigned char*", raw_data), data_size)
+            else:
+                raise AssertionError("decoded value has invalid type name")
 
         finally:
             dj_core.allocated_decoded_value_free(value)
+
+        return col_name, result
+
+    def __getitem__(self, index):
+        col_name, val = self.decode_col(index)
+        return val
+
+    def to_dict(self):
+        result = dict()
+        for i in range(self.column_count()):
+            col_name, val = self.decode_col(i)
+            result[col_name] = val
+        return result

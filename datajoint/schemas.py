@@ -88,7 +88,8 @@ class Schema:
         if schema_name is None:
             if self.exists:
                 return
-            raise DataJointError("Please provide a schema_name to activate the schema.")
+            raise DataJointError(
+                "Please provide a schema_name to activate the schema.")
         if self.database is not None and self.exists:
             if self.database == schema_name:  # already activated
                 return
@@ -113,7 +114,8 @@ class Schema:
             # create database
             logger.info("Creating schema `{name}`.".format(name=schema_name))
             try:
-                self.connection.query("CREATE DATABASE `{name}`".format(name=schema_name))
+                self.connection.query(
+                    "CREATE DATABASE `{name}`".format(name=schema_name))
             except AccessError:
                 raise DataJointError(
                     "Schema `{name}` does not exist and could not be created. "
@@ -141,7 +143,8 @@ class Schema:
         """
         context = context or self.context or inspect.currentframe().f_back.f_locals
         if issubclass(cls, Part):
-            raise DataJointError('The schema decorator should not be applied to Part relations')
+            raise DataJointError(
+                'The schema decorator should not be applied to Part relations')
         if self.is_activated():
             self._decorate_master(cls, context)
         else:
@@ -153,7 +156,8 @@ class Schema:
         :param cls: the master class to process
         :param context: the class' declaration context
         """
-        self._decorate_table(cls, context=dict(context, self=cls, **{cls.__name__: cls}))
+        self._decorate_table(cls, context=dict(
+            context, self=cls, **{cls.__name__: cls}))
         # Process part tables
         for part in ordered_dir(cls):
             if part[0].isupper():
@@ -183,14 +187,16 @@ class Schema:
         is_declared = instance.is_declared
         if not is_declared:
             if not self.create_tables or assert_declared:
-                raise DataJointError('Table `%s` not declared' % instance.table_name)
+                raise DataJointError(
+                    'Table `%s` not declared' % instance.table_name)
             instance.declare(context)
             self.connection.dependencies.clear()
         is_declared = is_declared or instance.is_declared
 
         # add table definition to the doc string
         if isinstance(table_class.definition, str):
-            table_class.__doc__ = (table_class.__doc__ or "") + "\nTable definition:\n\n" + table_class.definition
+            table_class.__doc__ = (table_class.__doc__ or "") + \
+                "\nTable definition:\n\n" + table_class.definition
 
         # fill values in Lookup tables from their contents property
         if isinstance(instance, Lookup) and hasattr(instance, 'contents') and is_declared:
@@ -227,7 +233,7 @@ class Schema:
 
     def spawn_missing_classes(self, context=None):
         """
-        Creates the appropriate python user relation classes from tables in the schema and places them
+        Creates the appropriate pthon user relation classes from tables in the schema and places them
         in the context.
         :param context: alternative context to place the missing classes into, e.g. locals()
         """
@@ -249,13 +255,15 @@ class Schema:
             class_name = to_camel_case(table_name)
             if class_name not in context:
                 try:
-                    cls = next(cls for cls in master_classes if re.fullmatch(cls.tier_regexp, table_name))
+                    cls = next(cls for cls in master_classes if re.fullmatch(
+                        cls.tier_regexp, table_name))
                 except StopIteration:
                     if re.fullmatch(Part.tier_regexp, table_name):
                         part_tables.append(table_name)
                 else:
                     # declare and decorate master relation classes
-                    context[class_name] = self(type(class_name, (cls,), dict()), context=context)
+                    context[class_name] = self(
+                        type(class_name, (cls,), dict()), context=context)
 
         # attach parts to masters
         for table_name in part_tables:
@@ -264,10 +272,12 @@ class Schema:
             try:
                 master_class = context[to_camel_case(groups['master'])]
             except KeyError:
-                raise DataJointError('The table %s does not follow DataJoint naming conventions' % table_name)
+                raise DataJointError(
+                    'The table %s does not follow DataJoint naming conventions' % table_name)
             part_class = type(class_name, (Part,), dict(definition=...))
             part_class._master = master_class
-            self._decorate_table(part_class, context=context, assert_declared=True)
+            self._decorate_table(
+                part_class, context=context, assert_declared=True)
             setattr(master_class, class_name, part_class)
 
     def drop(self, force=False):
@@ -280,10 +290,13 @@ class Schema:
         elif (not config['safemode'] or
               force or
               user_choice("Proceed to delete entire schema `%s`?" % self.database, default='no') == 'yes'):
-            logger.info("Dropping `{database}`.".format(database=self.database))
+            logger.info("Dropping `{database}`.".format(
+                database=self.database))
             try:
-                self.connection.query("DROP DATABASE `{database}`".format(database=self.database))
-                logger.info("Schema `{database}` was dropped successfully.".format(database=self.database))
+                self.connection.query(
+                    "DROP DATABASE `{database}`".format(database=self.database))
+                logger.info("Schema `{database}` was dropped successfully.".format(
+                    database=self.database))
             except AccessError:
                 raise AccessError(
                     "An attempt to drop schema `{database}` "
@@ -296,12 +309,13 @@ class Schema:
         """
         if self.database is None:
             raise DataJointError("Schema must be activated first.")
-        return bool(self.connection.query(
+        # TODO: Use core library execute query functionality to just get rows recieved
+        return bool(len(list(self.connection.query(
             "SELECT schema_name "
             "FROM information_schema.schemata "
-            "WHERE schema_name = '{database}'".format(database=self.database)).rowcount)
+            "WHERE schema_name = '{database}'".format(database=self.database)))))
 
-    @property
+    @ property
     def jobs(self):
         """
         schema.jobs provides a view of the job reservation table for the schema
@@ -312,7 +326,7 @@ class Schema:
             self._jobs = JobTable(self.connection, self.database)
         return self._jobs
 
-    @property
+    @ property
     def code(self):
         self._assert_exists()
         return self.save()
@@ -326,7 +340,8 @@ class Schema:
         self._assert_exists()
         module_count = itertools.count()
         # add virtual modules for referenced modules with names vmod0, vmod1, ...
-        module_lookup = collections.defaultdict(lambda: 'vmod' + str(next(module_count)))
+        module_lookup = collections.defaultdict(
+            lambda: 'vmod' + str(next(module_count)))
         db = self.database
 
         def make_class_definition(table):
@@ -351,14 +366,17 @@ class Schema:
                     indent=indent,
                     tier=tier,
                     defi=re.sub(r'`([^`]+)`.`([^`]+)`', replace,
-                                FreeTable(self.connection, table).describe(printout=False)
+                                FreeTable(self.connection, table).describe(
+                                    printout=False)
                                 ).replace('\n', '\n    ' + indent))
 
         diagram = Diagram(self)
-        body = '\n\n'.join(make_class_definition(table) for table in diagram.topological_sort())
+        body = '\n\n'.join(make_class_definition(table)
+                           for table in diagram.topological_sort())
         python_code = '\n\n'.join((
             '"""This module was auto-generated by datajoint from an existing schema"""',
-            "import datajoint as dj\n\nschema = dj.Schema('{db}')".format(db=db),
+            "import datajoint as dj\n\nschema = dj.Schema('{db}')".format(
+                db=db),
             '\n'.join("{module} = dj.VirtualModule('{module}', '{schema_name}')".format(module=v, schema_name=k)
                       for k, v in module_lookup.items()), body))
         if python_filename is None:
@@ -382,6 +400,7 @@ class VirtualModule(types.ModuleType):
     A virtual module imitates a Python module representing a DataJoint schema from table definitions in the database.
     It declares the schema objects and a class for each table.
     """
+
     def __init__(self, module_name, schema_name, *, create_schema=False,
                  create_tables=False, connection=None, add_objects=None):
         """
