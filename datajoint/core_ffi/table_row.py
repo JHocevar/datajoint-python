@@ -72,16 +72,12 @@ class TableRow:
             # the assumption that all columns are numbered properly via
             # their ordinal.
 
-            if index >= self.column_count():
+            # TODO(Edward-garmon) handle out of bound errors better
+            if type(index) == int and index >= self.column_count():
                 return None, None
 
-            col_name = None
-
-            if type(index) == str:
-                col_name = index
-            else:
-                col = self.column(index)
-                col_name = col.name()
+            col = self.column(index)
+            col_name = col.name()
             err = dj_core.table_row_decode_to_allocation(
                 self.native[0], col.native[0], value)
             if err != dj_core.ErrorCode_Success:
