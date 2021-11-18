@@ -21,7 +21,6 @@ class Attribute(namedtuple('_Attribute', default_attribute_properties)):
     """
     Properties of a table column (attribute)
     """
-
     def todict(self):
         """Convert namedtuple to dict."""
         return dict((name, self[i]) for i, name in enumerate(self._fields))
@@ -218,27 +217,20 @@ class Heading:
                 in_key=(attr['in_key'] == 'PRI'),
                 database=database,
                 nullable=attr['nullable'] == 'YES',
-                autoincrement=bool(
-                    re.search(r'auto_increment', attr['Extra'], flags=re.I)),
-                numeric=any(TYPE_PATTERN[t].match(attr['type'])
-                            for t in ('DECIMAL', 'INTEGER', 'FLOAT')),
-                string=any(TYPE_PATTERN[t].match(attr['type'])
-                           for t in ('ENUM', 'TEMPORAL', 'STRING')),
-                is_blob=bool(
-                    TYPE_PATTERN['INTERNAL_BLOB'].match(attr['type'])),
+                autoincrement=bool(re.search(r'auto_increment', attr['Extra'], flags=re.I)),
+                numeric=any(TYPE_PATTERN[t].match(attr['type']) for t in ('DECIMAL', 'INTEGER', 'FLOAT')),
+                string=any(TYPE_PATTERN[t].match(attr['type']) for t in ('ENUM', 'TEMPORAL', 'STRING')),
+                is_blob=bool(TYPE_PATTERN['INTERNAL_BLOB'].match(attr['type'])),
                 uuid=False, is_attachment=False, is_filepath=False, adapter=None,
                 store=None, is_external=False, attribute_expression=None)
 
             if any(TYPE_PATTERN[t].match(attr['type']) for t in ('INTEGER', 'FLOAT')):
-                # strip size off integers and floats
-                attr['type'] = re.sub(r'\(\d+\)', '', attr['type'], count=1)
-            attr['unsupported'] = not any(
-                (attr['is_blob'], attr['numeric'], attr['numeric']))
+                attr['type'] = re.sub(r'\(\d+\)', '', attr['type'], count=1)  # strip size off integers and floats
+            attr['unsupported'] = not any((attr['is_blob'], attr['numeric'], attr['numeric']))
             attr.pop('Extra')
 
             # process custom DataJoint types
-            special = re.match(
-                r':(?P<type>[^:]+):(?P<comment>.*)', attr['comment'])
+            special = re.match(r':(?P<type>[^:]+):(?P<comment>.*)', attr['comment'])
             if special:
                 special = special.groupdict()
                 attr.update(special)
@@ -257,21 +249,18 @@ class Heading:
                         raise DataJointError(
                             "Invalid attribute type '{type}' in adapter object <{adapter_name}>.".format(
                                 adapter_name=adapter_name, **attr))
-                    special = not any(TYPE_PATTERN[c].match(
-                        attr['type']) for c in NATIVE_TYPES)
+                    special = not any(TYPE_PATTERN[c].match(attr['type']) for c in NATIVE_TYPES)
 
             if special:
                 try:
-                    category = next(
-                        c for c in SPECIAL_TYPES if TYPE_PATTERN[c].match(attr['type']))
+                    category = next(c for c in SPECIAL_TYPES if TYPE_PATTERN[c].match(attr['type']))
                 except StopIteration:
                     if attr['type'].startswith('external'):
                         url = "https://docs.datajoint.io/python/admin/5-blob-config.html" \
                               "#migration-between-datajoint-v0-11-and-v0-12"
                         raise DataJointError('Legacy datatype `{type}`. Migrate your external stores to '
                                              'datajoint 0.12: {url}'.format(url=url, **attr))
-                    raise DataJointError(
-                        'Unknown attribute type `{type}`'.format(**attr))
+                    raise DataJointError('Unknown attribute type `{type}`'.format(**attr))
                 if category == 'FILEPATH' and not _support_filepath_types():
                     raise DataJointError("""
                         The filepath data type is disabled until complete validation.
@@ -280,8 +269,7 @@ class Heading:
                         """.format(env=FILEPATH_FEATURE_SWITCH))
                 attr.update(
                     unsupported=False,
-                    is_attachment=category in (
-                        'INTERNAL_ATTACH', 'EXTERNAL_ATTACH'),
+                    is_attachment=category in ('INTERNAL_ATTACH', 'EXTERNAL_ATTACH'),
                     is_filepath=category == 'FILEPATH',
                     # INTERNAL_BLOB is not a custom type but is included for completeness
                     is_blob=category in ('INTERNAL_BLOB', 'EXTERNAL_BLOB'),
@@ -290,8 +278,7 @@ class Heading:
                     store=attr['type'].split('@')[1] if category in EXTERNAL_TYPES else None)
 
             if attr['in_key'] and any((attr['is_blob'], attr['is_attachment'], attr['is_filepath'])):
-                raise DataJointError(
-                    'Blob, attachment, or filepath attributes are not allowed in the primary key')
+                raise DataJointError('Blob, attachment, or filepath attributes are not allowed in the primary key')
 
             if attr['string'] and attr['default'] is not None and attr['default'] not in sql_literals:
                 attr['default'] = '"%s"' % attr['default']
@@ -305,21 +292,17 @@ class Heading:
                 is_integer = TYPE_PATTERN['INTEGER'].match(attr['type'])
                 is_float = TYPE_PATTERN['FLOAT'].match(attr['type'])
                 if is_integer and not attr['nullable'] or is_float:
-                    is_unsigned = bool(
-                        re.match('sunsigned', attr['type'], flags=re.I))
-                    # remove parentheses
-                    t = re.sub(r'\(.*\)', '', attr['type'])
+                    is_unsigned = bool(re.match('sunsigned', attr['type'], flags=re.I))
+                    t = re.sub(r'\(.*\)', '', attr['type'])    # remove parentheses
                     t = re.sub(r' unsigned$', '', t)   # remove unsigned
-                    assert (
-                        t, is_unsigned) in numeric_types, 'dtype not found for type %s' % t
+                    assert (t, is_unsigned) in numeric_types, 'dtype not found for type %s' % t
                     attr['dtype'] = numeric_types[(t, is_unsigned)]
 
             if attr['adapter']:
                 # restore adapted type name
                 attr['type'] = adapter_name
 
-        self._attributes = dict(
-            ((q['name'], Attribute(**q)) for q in attributes))
+        self._attributes = dict(((q['name'], Attribute(**q)) for q in attributes))
 
         # Read and tabulate secondary indexes
         keys = defaultdict(dict)
@@ -351,8 +334,7 @@ class Heading:
             if name in select_list:
                 copy_attrs.append(self.attributes[name].todict())
             copy_attrs.extend((
-                dict(self.attributes[old_name].todict(
-                ), name=new_name, attribute_expression='`%s`' % old_name)
+                dict(self.attributes[old_name].todict(), name=new_name, attribute_expression='`%s`' % old_name)
                 for new_name, old_name in rename_map.items() if old_name == name))
         compute_attrs = (dict(default_attribute_properties, name=new_name, attribute_expression=expr)
                          for new_name, expr in compute_map.items())
@@ -375,8 +357,7 @@ class Heading:
         This low-level method performs no error checking.
         """
         return Heading(chain(
-            (dict(self.attributes[name].todict(), in_key=True)
-             for name in primary_key),
+            (dict(self.attributes[name].todict(), in_key=True) for name in primary_key),
             (dict(self.attributes[name].todict(), in_key=False) for name in self.names if name not in primary_key)))
 
     def make_subquery_heading(self):
