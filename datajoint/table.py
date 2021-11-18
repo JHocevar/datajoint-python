@@ -328,7 +328,7 @@ class Table(QueryExpression):
                     placeholders=','.join('(' + ','.join(row['placeholders']) + ')' for row in rows),
                     duplicate=(' ON DUPLICATE KEY UPDATE `{pk}`=`{pk}`'.format(pk=self.primary_key[0])
                                if skip_duplicates else ''))
-                self.connection.query(query, args=list(
+                self.connection.execute(query, args=list(
                     itertools.chain.from_iterable(
                         (v for v in r['values'] if v is not None) for r in rows)))
             except UnknownAttributeError as err:

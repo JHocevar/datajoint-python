@@ -41,6 +41,8 @@ class Connection:
             return out[0]
 
         ph_args = PlaceholderArgumentVector()
+        # ToDo(add support for multiple types of placeholders, probably within the rust lib, not here)
+        query = query.replace("%s", "?")
         for arg in arg_tuple:
             ph_args.add(arg)
         err = dj_core.connection_execute_query(
