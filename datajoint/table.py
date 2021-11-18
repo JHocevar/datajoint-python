@@ -242,8 +242,7 @@ class Table(QueryExpression):
         if not set(row).issuperset(self.primary_key):
             raise DataJointError('The argument of update1 must supply all primary key values.')
         try:
-            raise DataJointError('Attribute `%s` not found.' % next(
-                k for k in row if k not in self.heading.names))
+            raise DataJointError('Attribute `%s` not found.' % next(k for k in row if k not in self.heading.names))
         except StopIteration:
             pass  # ok
         if len(self.restriction):
@@ -252,8 +251,7 @@ class Table(QueryExpression):
         if len(self & key) != 1:
             raise DataJointError('Update entry must exist.')
         # UPDATE query
-        row = [self.__make_placeholder(
-            k, v) for k, v in row.items() if k not in self.primary_key]
+        row = [self.__make_placeholder(k, v) for k, v in row.items() if k not in self.primary_key]
         query = "UPDATE {table} SET {assignments} WHERE {where}".format(
             table=self.full_table_name,
             assignments=",".join('`%s`=%s' % r[:2] for r in row),
@@ -320,8 +318,7 @@ class Table(QueryExpression):
             return
 
         field_list = []  # collects the field list from first row (passed by reference)
-        rows = list(self.__make_row_to_insert(
-            row, field_list, ignore_extra_fields) for row in rows)
+        rows = list(self.__make_row_to_insert(row, field_list, ignore_extra_fields) for row in rows)
         if rows:
             try:
                 query = "{command} INTO {destination}(`{fields}`) VALUES {placeholders}{duplicate}".format(

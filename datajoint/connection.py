@@ -306,8 +306,7 @@ class Connection:
         # cursor_class = client.cursors.DictCursor if as_dict else client.cursors.Cursor
         # cursor = self._conn.cursor(cursor=cursor_class)
         try:
-            cursor = self._execute_query(
-                self._conn, query, args, suppress_warnings)
+            cursor = self._execute_query(self._conn, query, args, suppress_warnings)
         except errors.LostConnectionError:
             if not reconnect:
                 raise

@@ -224,8 +224,8 @@ class Heading:
                 uuid=False, is_attachment=False, is_filepath=False, adapter=None,
                 store=None, is_external=False, attribute_expression=None)
 
-            if any(TYPE_PATTERN[t].match(attr['type']) for t in ('INTEGER', 'FLOAT')): # strip size off integers and floats
-                attr['type'] = re.sub(r'\(\d+\)', '', attr['type'], count=1)
+            if any(TYPE_PATTERN[t].match(attr['type']) for t in ('INTEGER', 'FLOAT')):
+                attr['type'] = re.sub(r'\(\d+\)', '', attr['type'], count=1)  # strip size off integers and floats
             attr['unsupported'] = not any((attr['is_blob'], attr['numeric'], attr['numeric']))
             attr.pop('Extra')
 
@@ -293,7 +293,7 @@ class Heading:
                 is_float = TYPE_PATTERN['FLOAT'].match(attr['type'])
                 if is_integer and not attr['nullable'] or is_float:
                     is_unsigned = bool(re.match('sunsigned', attr['type'], flags=re.I))
-                    t = re.sub(r'\(.*\)', '', attr['type']) # remove parentheses
+                    t = re.sub(r'\(.*\)', '', attr['type'])    # remove parentheses
                     t = re.sub(r' unsigned$', '', t)   # remove unsigned
                     assert (t, is_unsigned) in numeric_types, 'dtype not found for type %s' % t
                     attr['dtype'] = numeric_types[(t, is_unsigned)]
