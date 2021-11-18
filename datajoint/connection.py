@@ -37,8 +37,7 @@ def connect_host_hook(connection_obj):
     if '://' in connection_obj.conn_info['host_input']:
         plugin_name = connection_obj.conn_info['host_input'].split('://')[0]
         try:
-            connection_plugins[plugin_name]['object'].load(
-            ).connect_host(connection_obj)
+            connection_plugins[plugin_name]['object'].load().connect_host(connection_obj)
         except KeyError:
             raise errors.DataJointError(
                 "Connection plugin '{}' not found.".format(plugin_name))
@@ -53,8 +52,7 @@ def translate_query_error(client_error, query):
     :param query: sql query with placeholders
     :return: an instance of the corresponding subclass of datajoint.errors.DataJointError
     """
-    logger.debug('type: {}, args: {}'.format(
-        type(client_error), client_error.args))
+    logger.debug('type: {}, args: {}'.format(type(client_error), client_error.args))
 
     err, *args = client_error.args
 
@@ -118,14 +116,12 @@ def conn(host=None, user=None, password=None, *, init_fun=None, reset=False, use
             password = getpass(prompt="Please enter DataJoint password: ")
         init_fun = init_fun if init_fun is not None else config['connection.init_function']
         use_tls = use_tls if use_tls is not None else config['database.use_tls']
-        conn.connection = Connection(
-            host, user, password, None, init_fun, use_tls)
+        conn.connection = Connection(host, user, password, None, init_fun, use_tls)
     return conn.connection
 
 
 class EmulatedCursor:
     """acts like a cursor"""
-
     def __init__(self, data):
         self._data = data
         self._iter = iter(self._data)
@@ -172,8 +168,7 @@ class Connection:
             port = config['database.port']
         self.conn_info = dict(host=host, port=port, user=user, passwd=password)
         if use_tls is not False:
-            self.conn_info['ssl'] = use_tls if isinstance(
-                use_tls, dict) else {'ssl': {}}
+            self.conn_info['ssl'] = use_tls if isinstance(use_tls, dict) else {'ssl': {}}
         self.conn_info['ssl_input'] = use_tls
         self.conn_info['host_input'] = host_input
         self.init_fun = init_fun
@@ -182,8 +177,7 @@ class Connection:
         self._query_cache = None
         connect_host_hook(self)
         if self.is_connected:
-            logger.info(
-                "Connected {user}@{host}:{port}".format(**self.conn_info))
+            logger.info("Connected {user}@{host}:{port}".format(**self.conn_info))
             self.connection_id = list(self.query('SELECT connection_id()'))[0]
         else:
             raise errors.LostConnectionError('Connection failed.')
@@ -293,14 +287,11 @@ class Connection:
         # check cache first:
         use_query_cache = bool(self._query_cache)
         if use_query_cache and not re.match(r"\s*(SELECT|SHOW)", query):
-            raise errors.DataJointError(
-                "Only SELECT query are allowed when query caching is on.")
+            raise errors.DataJointError("Only SELECT query are allowed when query caching is on.")
         if use_query_cache:
             if not config['query_cache']:
-                raise errors.DataJointError(
-                    "Provide filepath dj.config['query_cache'] when using query caching.")
-            hash_ = uuid_from_buffer(
-                (str(self._query_cache) + re.sub(r'`\$\w+`', '', query)).encode() + pack(args))
+                raise errors.DataJointError("Provide filepath dj.config['query_cache'] when using query caching.")
+            hash_ = uuid_from_buffer((str(self._query_cache) + re.sub(r'`\$\w+`', '', query)).encode() + pack(args))
             cache_path = pathlib.Path(config['query_cache']) / str(hash_)
             try:
                 buffer = cache_path.read_bytes()
@@ -320,17 +311,14 @@ class Connection:
         except errors.LostConnectionError:
             if not reconnect:
                 raise
-            warnings.warn(
-                "MySQL server has gone away. Reconnecting to the server.")
+            warnings.warn("MySQL server has gone away. Reconnecting to the server.")
             connect_host_hook(self)
             if self._in_transaction:
                 self.cancel_transaction()
-                raise errors.LostConnectionError(
-                    "Connection was lost during a transaction.")
+                raise errors.LostConnectionError("Connection was lost during a transaction.")
             logger.debug("Re-executing")
             cursor = self._conn.cursor(cursor=cursor_class)
-            cursor = self._execute_query(
-                self._conn, query, args, suppress_warnings)
+            cursor = self._execute_query(self._conn, query, args, suppress_warnings)
 
         if use_query_cache:
             data = cursor.fetchall()
@@ -359,8 +347,7 @@ class Connection:
         Starts a transaction error.
         """
         if self.in_transaction:
-            raise errors.DataJointError(
-                "Nested connections are not supported.")
+            raise errors.DataJointError("Nested connections are not supported.")
         self.query('START TRANSACTION WITH CONSISTENT SNAPSHOT')
         self._in_transaction = True
         logger.info("Transaction started")
