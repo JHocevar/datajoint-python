@@ -84,7 +84,7 @@ class Table(QueryExpression):
             # declare all external tables before declaring main table
             for store in external_stores:
                 self.connection.schemas[self.database].external[store]
-            self.connection.query(sql)
+            self.connection.execute(sql)
         except AccessError:
             # skip if no create privilege
             pass

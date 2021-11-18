@@ -3,14 +3,16 @@ from .datajoint_core_lib import dj_core
 from .errors import datajoint_core_assert_success
 from .table_column_ref import TableColumnRef
 
+    
 
-class TableRow:
+class TableRow():
     """
     TableRow class
     """
 
     def __init__(self, native=None, owning=True):
         self.native = ffi.new("TableRow**")
+        self.cache = {}
         if native is None:
             self.native[0] = ffi.NULL
             self.owning = True
@@ -65,6 +67,11 @@ class TableRow:
         return out_column
 
     def decode_col(self, index):
+
+        if index in self.cache:
+            print("hitting cached value")
+            return index, self.cache[index]
+
         try:
             value = dj_core.allocated_decoded_value_new()
 
@@ -139,11 +146,15 @@ class TableRow:
         finally:
             dj_core.allocated_decoded_value_free(value)
 
+        self.cache[col_name] = result
         return col_name, result
 
     def __getitem__(self, index):
         col_name, val = self.decode_col(index)
         return val
+
+    def __str__(self):
+        return self.to_dict().__str__()
 
     def to_dict(self):
         result = dict()
@@ -151,3 +162,28 @@ class TableRow:
             col_name, val = self.decode_col(i)
             result[col_name] = val
         return result
+
+    def __iter__(self):
+        return iter(self.values())
+
+    def keys(self):
+        result = []
+        for i in range(self.column_count()):
+            col_name, val = self.decode_col(i)
+            result.append(col_name)
+        return result
+    
+    def values(self):
+        result = []
+        for i in range(self.column_count()):
+            col_name, val = self.decode_col(i)
+            result.append(val)
+        return result
+
+    def items(self):
+        result = []
+        for i in range(self.column_count()):
+            col_name, val = self.decode_col(i)
+            result.append((col_name, val))
+        return result
+

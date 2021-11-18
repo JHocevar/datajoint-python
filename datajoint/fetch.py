@@ -197,20 +197,25 @@ class Fetch:
                             for name in heading.names) for d in cur]
             else:
                 ret = list(cur.fetchall())
-                record_type = (heading.as_dtype if not ret else np.dtype(
-                    [(name, type(value))   # use the first element to determine blob type
-                        if heading[name].is_blob and isinstance(value, numbers.Number)
-                        else (name, heading.as_dtype[name])
-                        for value, name in zip(ret[0], heading.as_dtype.names)]))
-                try:
-                    ret = np.array(ret, dtype=record_type)
-                except Exception as e:
-                    raise e
-                for name in heading:
-                    # unpack blobs and externals
-                    ret[name] = list(map(partial(get, heading[name]), ret[name]))
-                if format == "frame":
-                    ret = pandas.DataFrame(ret).set_index(heading.primary_key)
+
+                
+                # record_type = (heading.as_dtype if not ret else np.dtype(
+                #     [(name, type(value))   # use the first element to determine blob type
+                #         if heading[name].is_blob and isinstance(value, numbers.Number)
+                #         else (name, heading.as_dtype[name])
+                #         for value, name in zip(ret[0], heading.as_dtype.names)]))
+                # try:
+                #     ret = np.array(ret, dtype=record_type)
+                    
+                # except Exception as e:
+                #     raise e
+                # for name in heading:
+                #     # unpack blobs and externals
+                #     print("unpacking" , name )
+                #     ret[name] = list(map(partial(get, heading[name]), ret[name]))
+                      
+                # if format == "frame":
+                #     ret = pandas.DataFrame(ret).set_index(heading.primary_key)
         return ret
 
 

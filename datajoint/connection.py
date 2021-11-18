@@ -272,15 +272,28 @@ class Connection:
                 if suppress_warnings:
                     # suppress all warnings arising from underlying SQL library
                     warnings.simplefilter("ignore")
-                print(f'fetching query: {query} with args: {args}')
+                # print(f'fetching query: {query} with args: {args}')
                 cursor = conn.fetch_query(query, args)
-                for row in list(cursor):
-                    print(row.to_dict())
                 return conn.fetch_query(query, args)
-        except client.err.Error as err:
+
+        # TODO(Edward-garmon): better exception handling
+        except Exception as err:
             raise translate_query_error(err, query)
 
+    def execute(self, query, args = ()):
+
+        print("executing query" , query, "with args" , args)
+
+        """
+            Executes a query for side effects and nothing else
+            returns the number of rows
+        """
+        return self._conn.execute_query(query, args)
+
     def query(self, query, args=(), *, as_dict=False, suppress_warnings=True, reconnect=None):
+
+        print(query, "query being made with args", args )
+
         """
         Execute the specified query and return the tuple generator (cursor).
         :param query: SQL query

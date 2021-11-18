@@ -26,7 +26,11 @@ class Cursor:
             datajoint_core_assert_success(err)
 
     def fetchone(self):
-        return self.__next__()
+        try:
+            return self.__next__()
+        except StopIteration:
+            return None
+            
 
     def fetchall(self):
         return list(self)

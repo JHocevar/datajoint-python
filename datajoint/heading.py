@@ -172,7 +172,7 @@ class Heading:
                 return
             raise DataJointError('The table `{database}`.`{table_name}` is not defined.'.format(
                 table_name=table_name, database=database))
-        self._table_status = {k.lower(): v for k, v in info.to_dict().items()}
+        self._table_status = {k.lower(): v for k, v in info.items()}
         cur = conn.query(
             'SHOW FULL COLUMNS FROM `{table_name}` IN `{database}`'.format(
                 table_name=table_name, database=database), as_dict=True)
@@ -191,7 +191,7 @@ class Heading:
 
         # rename and drop attributes
         attributes = [{rename_map[k] if k in rename_map else k: v
-                       for k, v in x.to_dict().items() if k not in fields_to_drop}
+                       for k, v in x.items() if k not in fields_to_drop}
                       for x in attributes]
         numeric_types = {
             ('float', False): np.float64,
